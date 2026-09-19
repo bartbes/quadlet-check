@@ -1,0 +1,4 @@
+(executable
+ (public_name quadlet-check)
+ (name main)
+ (libraries quadlet_check))
