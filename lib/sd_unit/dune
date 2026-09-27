@@ -1,0 +1,5 @@
+(library
+ (name sd_unit)
+ (inline_tests)
+ (libraries angstrom)
+ (preprocess (pps ppx_inline_test)))

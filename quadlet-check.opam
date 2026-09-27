@@ -11,6 +11,8 @@ bug-reports: "https://github.com/bartbes/quadlet-check/issues"
 depends: [
   "dune" {>= "3.23"}
   "ocaml"
+  "angstrom"
+  "ppx_inline_test" {with-test}
   "odoc" {with-doc}
 ]
 build: [

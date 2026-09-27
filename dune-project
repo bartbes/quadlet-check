@@ -17,4 +17,7 @@
  (name quadlet-check)
  (synopsis "Check podman quadlet files for image updates")
  (description "Quadlet-check parses your podman quadlet files, and checks if the images they refer to have updates")
- (depends ocaml))
+ (depends
+   ocaml
+   angstrom
+   (ppx_inline_test :with-test)))
