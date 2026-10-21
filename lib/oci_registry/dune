@@ -1,0 +1,4 @@
+(library
+ (name oci_registry)
+ (libraries lwt.unix cohttp-lwt-unix yojson)
+ (preprocess (pps lwt_ppx)))

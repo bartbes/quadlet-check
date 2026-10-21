@@ -20,4 +20,10 @@
  (depends
    ocaml
    angstrom
+   lwt
+   lwt_ppx
+   fpath
+   cohttp-lwt-unix
+   tls-lwt
+   yojson
    (ppx_inline_test :with-test)))
