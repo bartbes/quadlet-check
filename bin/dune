@@ -1,4 +1,6 @@
 (executable
  (public_name quadlet-check)
  (name main)
- (libraries sd_unit))
+ (modules main)
+ (libraries sd_unit oci_registry lwt.unix fpath)
+ (preprocess (pps lwt_ppx)))
