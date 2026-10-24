@@ -1,8 +1,6 @@
 module YB = Yojson.Basic
 module YBU = Yojson.Basic.Util
 
-let target_os_arch = "linux/arm64"
-
 module ProgressChar = struct
     type t = {
         mutable current : int
@@ -37,24 +35,26 @@ let parse_file filename =
         | Error(error) -> Error("Error in '" ^ filename ^ "': " ^ error) in
     Lwt_io.chars_of_file filename |> Lwt_stream.to_string |> Lwt.map to_unit
 
-let get_manifest_digest_from_index index =
+let get_manifest_digest_from_index ~os ~arch index =
     let index = YB.from_string index in
+    let combine_os_arch ~os ~arch =
+        os ^ "/" ^ arch in
     let describe_manifest_entry m =
         let digest = m |> YBU.member "digest" |> YBU.to_string in
         let arch = m |> YBU.member "platform" |> YBU.member "architecture" |> YBU.to_string in
         let os = m |> YBU.member "platform" |> YBU.member "os" |> YBU.to_string in
-        (os ^ "/" ^ arch, digest) in
+        (combine_os_arch ~os ~arch, digest) in
     let manifests = index |> YBU.member "manifests" |> YBU.convert_each describe_manifest_entry in
-    Lwt.return @@ List.assoc_opt target_os_arch manifests
+    Lwt.return @@ List.assoc_opt (combine_os_arch ~os ~arch) manifests
 
-let get_manifest_digest registry tag =
+let get_manifest_digest registry ~os ~arch tag =
     match%lwt Oci_registry.test_manifest registry tag with
     | Error(_) -> Lwt.return_none
     | Ok(Oci_registry.Manifest, digest) -> Lwt.return_some digest
     | Ok(Oci_registry.Index, _) ->
         match%lwt Oci_registry.pull_manifest ~manifest_type:Oci_registry.Index registry tag with
         | Error(_) -> Lwt.return_none
-        | Ok(index) -> get_manifest_digest_from_index index
+        | Ok(index) -> get_manifest_digest_from_index ~os ~arch index
 
 (* Does it matter if we match the index instead of the manifest? I feel like it doesn't.
    Note that there is one edge case: if you're trying to compare a tagged manifest to a tagged index. *)
