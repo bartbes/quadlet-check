@@ -86,22 +86,22 @@ let determine_tags_of_digest ~known_tag ~digest ?(delay=0.2) registry =
     ProgressChar.clear progress ;%lwt
     Lwt.return tags
 
-let check_file file =
+let check_file ~latest_tag file =
     let filename = Fpath.v file |> Fpath.normalize |> Fpath.filename in
     let%lwt () = Lwt_io.printf "\x1b[1mTrying file %s\x1b[0m\n" filename in
     let check_tagged_image image tag =
         let registry = Oci_registry.of_image_name image in
-        let%lwt latest_digest = get_manifest_digest registry "latest" in
+        let%lwt latest_digest = get_manifest_digest registry latest_tag in
         let%lwt current_digest = get_manifest_digest registry tag in
         match (latest_digest, current_digest) with
         | (None, _) ->
-            Lwt_io.printf "  \x1b[31mCould not determine digest of \x1b[3mlatest\x1b[0m\n"
+            Lwt_io.printf "  \x1b[31mCould not determine digest of \x1b[3m%s\x1b[0m\n" latest_tag
         | (_, None) ->
             Lwt_io.printf "  \x1b[31mCould not determine digest of \x1b[3m%s\x1b[0m\n" tag
         | (Some(latest_digest), Some(current_digest)) when String.equal latest_digest current_digest ->
-            Lwt_io.printf "  \x1b[32mDigest of \x1b[3m%s\x1b[23m matches \x1b[3mlatest\x1b[23m (%s)]\x1b[0m\n" tag current_digest
+            Lwt_io.printf "  \x1b[32mDigest of \x1b[3m%s\x1b[23m matches \x1b[3m%s\x1b[23m (%s)]\x1b[0m\n" tag latest_tag current_digest
         | (Some(latest_digest), Some(current_digest)) ->
-            Lwt_io.printf "  Digest of \x1b[3mlatest\x1b[23m is %s\n" latest_digest ;%lwt
+            Lwt_io.printf "  Digest of \x1b[3m%s\x1b[23m is %s\n" latest_tag latest_digest ;%lwt
             Lwt_io.printf "  Digest of \x1b[3m%s\x1b[23m is %s\n" tag current_digest ;%lwt
             match%lwt determine_tags_of_digest ~known_tag:tag ~digest:latest_digest registry with
             | [] -> Lwt_io.printf "  \x1b[31mNo tags found!\x1b[0m\n"
@@ -119,8 +119,15 @@ let check_file file =
     with Failure f ->
         Lwt_io.printf "  \x1b[31mCaught failure: %s\x1b[0m\n" f
 
-let main () =
-    let files = Array.to_seq Sys.argv |> Seq.drop 1 |> Lwt_seq.of_seq in
-    Lwt_seq.iter_s check_file files
+let () =
+    let target = ref "latest" in
+    let usage_msg = Printf.sprintf "%s [--target=%s] <file1> [file2] ..." Sys.argv.(0) !target in
+    let check_single_file file =
+        Lwt_main.run (check_file ~latest_tag:!target file) in
 
-let () = Lwt_main.run (main ())
+    let speclist = [
+        ("--target", Arg.Set_string target, "The target ('latest') tag to sync to");
+        ("--", Arg.Rest check_single_file, "Stop processing flags and assume the remaining arguments are file names")
+    ] in
+
+    Arg.parse speclist check_single_file usage_msg
